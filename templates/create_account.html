@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Gift Manager
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 d-flex justify-content-center">
+  <div class="card shadow p-4" style="max-width: 500px; width: 100%;">
+    <h3 class="text-center mb-4">Create a New Account</h3>
+    <form method="post" action="">
+      {% csrf_token %}
+      
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="id_username" class="font-weight-bold">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.username.errors|join:', ' }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="id_email" class="font-weight-bold">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.email.errors|join:', ' }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="id_password1" class="font-weight-bold">Password</label>
+        {{ form.password1 }}
+        {% if form.password1.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.password1.errors|join:', ' }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Confirm Password Field -->
+      <div class="form-group">
+        <label for="id_password2" class="font-weight-bold">Confirm Password</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.password2.errors|join:', ' }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Submit Button -->
+      <div class="form-group mt-4">
+        <button type="submit" class="btn btn-primary btn-block">
+          Create Account
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

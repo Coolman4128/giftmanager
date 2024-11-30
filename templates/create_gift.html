@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Add Gift
+{% endblock %}
+
+{% block content %}
+<main class="container mx-auto py-12 flex justify-center">
+  <div class="bg-light p-8 rounded-lg shadow-md w-full max-w-md">
+    <h1 class="text-dark text-3xl font-bold mb-6 text-center">Add a Gift</h1>
+
+    <!-- Message Area -->
+    {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} text-center">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      <!-- Gift Name -->
+      <div class="mb-4">
+        <label for="id_name" class="text-dark font-bold mb-2 block">Gift Name</label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.name.errors|join:", " }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Gift Description -->
+      <div class="mb-4">
+        <label for="id_description" class="text-dark font-bold mb-2 block">Gift Description</label>
+        {{ form.description }}
+        {% if form.description.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.description.errors|join:", " }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Gift Link -->
+      <div class="mb-4">
+        <label for="id_link" class="text-dark font-bold mb-2 block">Gift Link (optional)</label>
+        {{ form.link }}
+        {% if form.link.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.link.errors|join:", " }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="flex justify-center">
+        <button 
+          type="submit" 
+          class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition duration-300 cursor-pointer">
+          Add Gift
+        </button>
+      </div>
+    </form>
+  </div>
+</main>
+
+<style>
+  body {
+    background-color: #f8f9fa;
+    font-family: sans-serif;
+  }
+
+  .bg-light {
+    background-color: #ffffff;
+  }
+
+  .text-dark {
+    color: #343a40;
+  }
+
+  .text-danger {
+    color: #dc3545;
+  }
+
+  .alert {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+
+  .alert-success {
+    background-color: #d4edda;
+    color: #155724;
+  }
+
+  .alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  .bg-primary {
+    background-color: #007bff;
+  }
+
+  .bg-secondary {
+    background-color: #6c757d;
+  }
+
+  .text-white {
+    color: #ffffff;
+  }
+
+  input[type="text"],
+  textarea,
+  input[type="url"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  textarea {
+    resize: none;
+  }
+
+  input:focus,
+  textarea:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.25);
+  }
+
+  button {
+    font-size: 1rem;
+    font-weight: bold;
+  }
+</style>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Gift Manager
+{% endblock %}
+
+{% block content %}
+<main class="container mx-auto py-12">
+  <h1 class="text-dark text-3xl font-bold mb-6 text-center">Gifts</h1>
+
+  <!-- Filter Form -->
+  <div class="d-flex justify-content-center mb-4">
+    <form method="get" action="" class="d-flex gap-3 align-items-center">
+      <!-- Dropdown Menu -->
+      <div>
+        <label for="filterDropdown" class="form-label font-bold">Filter by:</label>
+        <select id="filterDropdown" name="filter_by" class="form-select">
+          <option value="">Select Option</option>
+          {% for user in users %}
+          <option value="{{ user.id }}" {% if request.GET.filter_by == user.id %}selected{% endif %}>{{ user.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Checkbox -->
+      <div>
+        <label for="filterCheckbox" class="form-label font-bold">Include:</label>
+        <div class="form-check">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="filterCheckbox"
+            name="include"
+            value="yes"
+            {% if request.GET.include == "yes" %}checked{% endif %}
+          >
+          <label class="form-check-label" for="filterCheckbox">Checkbox Option</label>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div>
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Gifts Table -->
+  <div class="bg-light p-4 rounded-lg shadow-md">
+    <table class="table table-striped table-bordered">
+      <thead class="thead-dark">
+        <tr>
+          <th>Name</th>
+          <th>Who For?</th>
+          <th>Link</th>
+          <th>Claim</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for gift in gifts %}
+          <tr class="gift-row" data-description="{{ gift.description }}">
+            <td>{{ gift.name }}</td>
+            <td>{{ gift.user_paired.username }}</td>
+            <td>
+              {% if gift.link %}
+                <a href="{{ gift.link }}" target="_blank">View</a>
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
+            <td>
+                {% if gift.is_claimed %}
+                Claimed
+                {%else%}
+              <form method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="claim">
+                <input type="hidden" name="gift_id" value="{{ gift.id }}">
+                <button type="submit" class="btn btn-success btn-sm">Claim</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          <tr class="gift-description-row" style="display: none;">
+            <td colspan="4">{{ gift.description }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="text-center">No gifts found</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<style>
+  body {
+    background-color: #f8f9fa;
+    font-family: sans-serif;
+  }
+
+  .bg-light {
+    background-color: #ffffff;
+  }
+
+  .text-dark {
+    color: #343a40;
+  }
+
+  .thead-dark th {
+    background-color: #343a40;
+    color: #ffffff;
+  }
+
+  .gift-row {
+    cursor: pointer;
+  }
+
+  .gift-description-row {
+    background-color: #f8f9fa;
+    font-style: italic;
+  }
+
+  .btn-success {
+    background-color: #28a745;
+    color: white;
+  }
+</style>
+
+<script>
+  // JavaScript to handle row expansion/collapse
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.gift-row').forEach(row => {
+      row.addEventListener('click', function () {
+        const descriptionRow = this.nextElementSibling;
+        if (descriptionRow && descriptionRow.classList.contains('gift-description-row')) {
+          descriptionRow.style.display = descriptionRow.style.display === 'none' ? '' : 'none';
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

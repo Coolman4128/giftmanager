@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Gift Manager
+{% endblock %}
+
+{% block breadcrumb %}
+{% endblock %}
+
+{% load tz %}
+{% load static %}
+
+{% block content %}
+<main class="container mx-auto py-12 flex justify-center">
+  <div class="bg-light p-8 rounded-lg shadow-md w-full max-w-md">
+    <h1 class="text-dark text-3xl font-bold mb-6 text-center">Login</h1>
+    
+    <!-- Message Area -->
+    {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} text-center">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if form.errors %}
+      <p class="text-danger mb-4">
+        Your username and password didn't match. Please try again.
+      </p>
+    {% endif %}
+
+    {% if next %}
+      {% if user.is_authenticated %}
+        <p class="text-warning mb-4">
+          Your account doesn't have access to this page. To proceed, please login with an account that has access.
+        </p>
+      {% else %}
+        <p class="text-warning mb-4">
+          Please login to see this page.
+        </p>
+      {% endif %}
+    {% endif %}
+
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      
+      <div class="mb-4">
+        <label class="text-dark font-bold mb-2 block" for="{{ form.username.id_for_label }}">
+          {{ form.username.label }}:
+        </label>
+        {{ form.username }}
+      </div>
+      
+      <div class="mb-6">
+        <label class="text-dark font-bold mb-2 block" for="{{ form.password.id_for_label }}">
+          {{ form.password.label }}:
+        </label>
+        {{ form.password }}
+      </div>
+      
+      <div class="flex justify-center">
+        <button 
+          type="submit" 
+          class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition duration-300 cursor-pointer">
+          Login
+        </button>
+        <input type="hidden" name="next" value="{{ next }}">
+      </div>
+    </form>
+
+    <!-- Create Account Button -->
+    <div class="mt-4 text-center">
+      <p class="text-secondary">Don't have an account?</p>
+      <a href="{% url 'register' %}" class="btn btn-outline-primary mt-2">
+        Create Account
+      </a>
+    </div>
+  </div>
+</main>
+
+<style>
+  /* Updated Colors for Better Readability */
+  body {
+    background-color: #f8f9fa; /* Light gray for improved readability */
+    font-family: sans-serif;
+  }
+
+  .bg-light {
+    background-color: #ffffff; /* White background for content */
+  }
+
+  .text-dark {
+    color: #343a40; /* Dark gray for text */
+  }
+
+  .text-danger {
+    color: #dc3545; /* Red for error messages */
+  }
+
+  .text-warning {
+    color: #ffc107; /* Amber for warnings */
+  }
+
+  .alert {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+
+  .alert-success {
+    background-color: #d4edda;
+    color: #155724;
+  }
+
+  .alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  .alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+
+  .bg-primary {
+    background-color: #007bff; /* Accessible blue for buttons */
+  }
+
+  .bg-secondary {
+    background-color: #6c757d; /* Gray for hover effect */
+  }
+
+  .text-white {
+    color: #ffffff; /* White text for contrast */
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  input[type="text"]:focus,
+  input[type="password"]:focus {
+    border-color: #007bff; /* Blue border on focus for better visibility */
+    outline: none;
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.25);
+  }
+
+  button {
+    font-size: 1rem;
+    font-weight: bold;
+  }
+</style>
+{% endblock %}
+
