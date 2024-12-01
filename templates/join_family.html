@@ -1,40 +1,82 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}
-  Gift Manager
-{% endblock %}
+{% block title %}Join or Create Family{% endblock %}
 
 {% block content %}
-<div class="container mt-5 d-flex justify-content-center">
-  <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
-    <h3 class="text-center mb-4">Enter Verification Code</h3>
-    <form method="post" action="">
-      {% csrf_token %}
-      <div class="form-group">
-        <label for="codeInput" class="font-weight-bold">6-Digit Code</label>
-        <input 
-          type="text" 
-          class="form-control" 
-          id="codeInput" 
-          name="code" 
-          maxlength="6" 
-          placeholder="Enter code"
-          required
-          pattern="\d{6}"
-          title="Code must be exactly 6 digits."
-        >
+<div class="max-w-md mx-auto bg-white shadow-lg rounded-lg p-6">
+  <h1 class="text-2xl font-bold text-green-900 text-center mb-6">Join or Create a Family 🎄</h1>
+
+  {% if error %}
+    <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  <form method="post" action="">
+    {% csrf_token %}
+    <div class="mb-4">
+      <label for="action" class="block font-bold text-gray-700 mb-2">Choose an Option:</label>
+      <select id="action" name="action" class="w-full border border-gray-300 rounded-lg p-2" onchange="toggleFamilyForm(this.value)">
+        <option value="" selected disabled>Choose an option</option>
+        <option value="join_family">Join an Existing Family</option>
+        <option value="create_family">Create a New Family</option>
+      </select>
+    </div>
+
+    <!-- Join Family Form -->
+    <div id="join-family-form" class="hidden">
+      <div class="mb-4">
+        <label for="code" class="block font-bold text-gray-700 mb-2">Enter Invite Code:</label>
+        <input
+          type="text"
+          id="code"
+          name="code"
+          class="w-full border border-gray-300 rounded-lg p-2"
+          placeholder="Enter 6-digit code"
+        />
       </div>
-      {% if error %}
-        <div class="alert alert-danger mt-3">
-          {{ error }}
-        </div>
-      {% endif %}
-      <div class="form-group mt-4">
-        <button type="submit" class="btn btn-primary btn-block">
-          Submit
-        </button>
+    </div>
+
+    <!-- Create Family Form -->
+    <div id="create-family-form" class="hidden">
+      <div class="mb-4">
+        <label for="family_name" class="block font-bold text-gray-700 mb-2">Family Name:</label>
+        <input
+          type="text"
+          id="family_name"
+          name="family_name"
+          class="w-full border border-gray-300 rounded-lg p-2"
+          placeholder="Enter family name"
+        />
       </div>
-    </form>
-  </div>
+    </div>
+
+    <div class="text-center">
+      <button
+        type="submit"
+        class="bg-green-700 text-white px-6 py-3 rounded-lg hover:bg-green-800 transition"
+      >
+        Submit
+      </button>
+    </div>
+  </form>
 </div>
+
+<script>
+  function toggleFamilyForm(action) {
+    const joinForm = document.getElementById("join-family-form");
+    const createForm = document.getElementById("create-family-form");
+
+    if (action === "join_family") {
+      joinForm.classList.remove("hidden");
+      createForm.classList.add("hidden");
+    } else if (action === "create_family") {
+      createForm.classList.remove("hidden");
+      joinForm.classList.add("hidden");
+    } else {
+      joinForm.classList.add("hidden");
+      createForm.classList.add("hidden");
+    }
+  }
+</script>
 {% endblock %}

@@ -11,6 +11,7 @@ class Family(models.Model):
 
 class User(AbstractUser):
     family = models.ForeignKey(Family, on_delete=models.CASCADE, null=True, blank=True)
+    name = models.CharField(max_length=200)
     def __str__(self):
         return self.username
 
@@ -18,7 +19,7 @@ class Gift(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField()
     family = models.ForeignKey(Family, on_delete=models.CASCADE)
-    link = models.URLField(null=True)
+    link = models.URLField(null=True, blank=True)
     user_paired = models.ForeignKey(User, on_delete=models.CASCADE)
     user_claimed = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_claimed", null=True, blank=True)
     is_claimed = models.BooleanField()

@@ -1,35 +1,79 @@
 {% load static %}
+{% load widget_tweaks %}
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>{% block title %}Gift Manager{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-    <script src="https://cdn.tailwindcss.com"></script>  
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-      <div class="container">
-        <a class="navbar-brand" href="{% url 'home' %}">Gift Manager</a>
-      </div>
-      <form class="form-inline ml-auto">
-        <a href="{% url 'add_gift' %}" class="btn btn-primary ml-2">Submit Gift</a>
+<html lang="en">
 
-        <!-- Notifications Button -->
-        <a href="{% url 'notifications' %}" class="btn {% if has_notifications %}btn-danger{% else %}btn-primary{% endif %} ml-2">
-          Notifications
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Gift Manager{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-b from-green-300 via-white to-red-200 flex flex-col">
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-4">
+        <!-- Logo -->
+        <a href="{% url 'home' %}" class="text-green-700 text-2xl font-bold hover:text-red-700">
+          🎄 Gift Manager 
         </a>
 
-        <a href="{% url 'account' %}" class="btn btn-primary ml-2">Account</a>
-      </form>
-    </nav>
+        <!-- Navigation Links -->
+        <div class="hidden md:flex space-x-8 items-center">
+          <a href="{% url 'add_gift' %}" class="text-gray-700 hover:text-red-600 text-lg">Submit Gift</a>
+          <a href="{% url 'notifications' %}" class="text-gray-700 hover:text-red-600 text-lg">
+            Notifications
+            {% if has_notifications %}
+              <span class="inline-block bg-red-500 text-white text-sm px-2 py-1 rounded-full ml-1">New</span>
+            {% endif %}
+          </a>
+          <a href="{% url 'account' %}" class="text-gray-700 hover:text-red-600 text-lg">Account</a>
+        </div>
 
-    <div class="container">
-      {% block breadcrumb %}
-      {% endblock %}
-     
-      {% block content %}
-      {% endblock %}
+        <!-- Mobile Menu -->
+        <div class="md:hidden">
+          <button id="mobile-menu-button" class="text-gray-700 focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-  </body>
+
+    <!-- Mobile Menu Dropdown -->
+    <div id="mobile-menu" class="hidden md:hidden bg-gray-100">
+      <a href="{% url 'add_gift' %}" class="block px-4 py-2 text-gray-700 hover:bg-red-100">Submit Gift</a>
+      <a href="{% url 'notifications' %}" class="block px-4 py-2 text-gray-700 hover:bg-red-100">Notifications</a>
+      <a href="{% url 'account' %}" class="block px-4 py-2 text-gray-700 hover:bg-red-100">Account</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-12">
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-green-700 text-white py-6">
+    <div class="max-w-7xl mx-auto text-center">
+      <p class="text-lg">&copy; {{ now|date:"Y" }} Gift Manager. Bringing holiday joy to everyone!</p>
+      <p class="text-sm">Built with 💚 and 🎁</p>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile Menu Toggle
+    const menuButton = document.getElementById("mobile-menu-button");
+    const mobileMenu = document.getElementById("mobile-menu");
+
+    menuButton.addEventListener("click", () => {
+      mobileMenu.classList.toggle("hidden");
+    });
+  </script>
+</body>
+
 </html>
