@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
+import random
 from django.db.models import Q
 from .forms import CustomUserCreationForm, GiftForm
 import math
@@ -26,18 +27,25 @@ def account(request):
         action = request.POST.get('action')
         gift_id = request.POST.get('gift_id')
 
+        if action == "leave_family":
+            user = request.user
+            user.family = None
+            user.save()
+            return redirect("family-select")
+
         # Ensure the gift exists
         gift = get_object_or_404(Gift, id=gift_id)
 
         if action == 'delete':
             # Delete gift logic
-            if gift.user_paired == request.user:
+            if gift.user_paired == request.user and gift.is_claimed:
                 notification = Notification(user_sent_to=gift.user_claimed, message=f"Gift '{gift.name}' has been deleted. You have automatically unclaimed this gift.")
                 notification.save()
                 gift.delete()
                 
-            else:
-                pass
+            elif gift.user_paired == request.user:
+                gift.delete()
+            
 
         elif action == 'unclaim':
             # Unclaim gift logic
@@ -51,6 +59,7 @@ def account(request):
             else:
                 pass
 
+        
         return redirect('account')
 
     return render(request, 'account.html', {
@@ -61,6 +70,9 @@ def account(request):
 @login_required
 def notifications(request):
     # Get all notifications for the logged-in user
+    user = request.user
+    if user.family == None:
+        return redirect("family-select")
     notifications = Notification.objects.filter(user_sent_to=request.user)
 
     if request.method == 'POST':
@@ -74,6 +86,8 @@ def notifications(request):
 @login_required
 def add_gift(request):
     user = request.user
+    if user.family == None:
+        return redirect("family-select")
     if request.method == 'POST':
         form = GiftForm(request.POST)
         if form.is_valid():
@@ -97,7 +111,8 @@ def gift_list(request):
     if user.family == None:
         return redirect("family-select")
     gifts = Gift.objects.filter(Q(family=user.family) & ~Q(user_paired=user) )
-    users = User.objects.all()
+    users = User.objects.filter(family=user.family)
+    users = users.exclude(id=user.id)
 
     # Filter by dropdown value
     filter_by = request.GET.get('filter_by')
@@ -129,26 +144,59 @@ def gift_list(request):
 @login_required
 def family_select(request):
     user = request.user
-    if user.family == None:
-        if request.method == 'POST':
-            code = request.POST.get('code')
 
-            # Validate that the code is 6 digits
+    if user.family:
+        return redirect("home")  # Redirect if the user is already in a family
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "join_family":
+            code = request.POST.get("code")
+
+            # Validate the invite code
             if not code or not code.isdigit() or len(code) != 6:
-                return render(request, "join_family.html", {'error': 'Please enter a valid 6-digit code.'})
+                return render(request, "join_family.html", {
+                    "error": "Please enter a valid 6-digit code."
+                })
 
             family = Family.objects.filter(invite_code=code).first()
             if family:
                 user.family = family
                 user.save()
+                messages.success(request, "Successfully joined the family!")
                 return redirect("home")
             else:
-                return render(request, "join_family.html", {'error': 'Couldnt Find Family, Try Again'})
+                return render(request, "join_family.html", {
+                    "error": "Family not found. Please try again."
+                })
 
-        else:
-            return render(request, "join_family.html", {'error': 'Invalid code. Please try again.'})
+        elif action == "create_family":
+            family_name = request.POST.get("family_name")
 
-    return redirect("home")
+            # Validate the family name
+            if not family_name or len(family_name.strip()) == 0:
+                return render(request, "join_family.html", {
+                    "error": "Please enter a valid family name."
+                })
+
+            # Create a new family
+            family = Family.objects.create(name=family_name, invite_code=random.randint(1, 999999))
+            if Family.objects.filter(name=family_name).count() > 1:
+                family.delete()
+                return render(request, "join_family.html", {
+                    "error": "Family name already exists. Please try again."
+                })
+            if Family.objects.filter(invite_code=family.invite_code).count() > 1:
+                family.delete()
+                return render(request, "join_family.html", {
+                    "error": "There was an error. Please try again."
+                })
+            user.family = family
+            user.save()
+            return redirect("home")
+
+    return render(request, "join_family.html")
 
 def register(request):
     if request.method == 'POST':
@@ -160,6 +208,6 @@ def register(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
 
     return render(request, 'create_account.html', {'form': form})
