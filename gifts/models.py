@@ -11,7 +11,6 @@ class Family(models.Model):
 
 class User(AbstractUser):
     family = models.ForeignKey(Family, on_delete=models.CASCADE, null=True, blank=True)
-    name = models.CharField(max_length=200)
     def __str__(self):
         return self.username
 

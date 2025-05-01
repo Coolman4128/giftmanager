@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-My Account
+Gift Manager
 {% endblock %}
 
 {% block content %}
@@ -119,7 +119,7 @@ My Account
           {% endfor %}
         </div>
       {% else %}
-        <p class="text-gray-500">No gifts attached to you yet. Add some to spread holiday cheer!</p>
+        <p class="text-gray-500">No gifts attached to you yet.</p>
       {% endif %}
     </div>
 
@@ -173,7 +173,7 @@ My Account
           {% endfor %}
         </div>
       {% else %}
-        <p class="text-gray-500">No gifts claimed by you yet. Explore and claim one to enjoy the season!</p>
+        <p class="text-gray-500">No gifts claimed by you yet.</p>
       {% endif %}
     </div>
 
