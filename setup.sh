@@ -28,7 +28,7 @@ echo "Building Docker image..."
 docker-compose build
 
 echo "Starting the application..."
-docker-compose up -d
+docker-compose -f docker-compose.prod.yml up -d
 
 echo "Waiting for the application to start..."
 sleep 10
