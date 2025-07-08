@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "80:8000"
+    volumes:
+      - ./data:/app/data
+      - static_volume:/app/static
+      - media_volume:/app/media
+    environment:
+      - DEBUG=false
+      - SECRET_KEY=${SECRET_KEY:-please-change-this-secret-key-in-production}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      - DATABASE_PATH=/app/data/db.sqlite3
+      - DJANGO_SETTINGS_MODULE=giftmanager.settings
+    restart: unless-stopped
+    container_name: giftmanager-prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  static_volume:
+  media_volume:

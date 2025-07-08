@@ -1,0 +1,36 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+.DS_Store
+.vscode
+
+README.md
+.gitignore
+Dockerfile*
+docker-compose*
+
+# Database files (we'll mount these as volumes)
+*.sqlite3
+db.sqlite3
+
+# Static files (will be collected in container)
+static/
+media/
