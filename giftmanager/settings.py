@@ -27,12 +27,22 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+# Local development works without a .env file. Deployments should override both
+# values with environment variables.
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='django-insecure-local-development-only-change-me',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = ['.giftmanager.top']  # Replace '*' with your domain name in production
+DEBUG = config('DEBUG', default='development').strip().lower() in {
+    '1', 'true', 'yes', 'on', 'development', 'debug',
+}
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,[::1],.giftmanager.top',
+    cast=lambda value: [host.strip() for host in value.split(',') if host.strip()],
+)
 
 
 # Application definition
@@ -86,7 +96,13 @@ AUTH_USER_MODEL = 'gifts.User'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(default=config('DATABASE_URL'))
+    'default': dj_database_url.config(
+        default=config(
+            'DATABASE_URL',
+            default=f"sqlite:///{(BASE_DIR / 'db.sqlite3').as_posix()}",
+        ),
+        conn_max_age=600,
+    )
 }
 
 

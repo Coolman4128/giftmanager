@@ -1,7 +1,7 @@
-django
-gunicorn
-dj-database-url
-whitenoise
-python-decouple
-psycopg2
-django-widget-tweaks
+Django>=5.1,<6.0
+gunicorn>=23,<24
+dj-database-url>=2.2,<3
+whitenoise>=6.8,<7
+python-decouple>=3.8,<4
+psycopg2-binary>=2.9,<3
+django-widget-tweaks>=1.5,<2
