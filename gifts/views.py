@@ -105,6 +105,31 @@ def add_gift(request):
 
     return render(request, 'create_gift.html', {'form': form})
 
+
+@login_required
+def edit_gift(request, gift_id):
+    gift = get_object_or_404(Gift, id=gift_id, user_paired=request.user)
+
+    if request.method == 'POST':
+        form = GiftForm(request.POST, instance=gift)
+        if form.is_valid():
+            details_changed = form.has_changed()
+            gift = form.save()
+
+            if details_changed and gift.is_claimed and gift.user_claimed_id:
+                Notification.objects.create(
+                    user_sent_to=gift.user_claimed,
+                    message=f"Gift '{gift.name}' has been updated.",
+                )
+
+            return redirect('account')
+
+        messages.error(request, 'Please correct the errors below.')
+    else:
+        form = GiftForm(instance=gift)
+
+    return render(request, 'edit_gift.html', {'form': form, 'gift': gift})
+
 @login_required
 def gift_list(request):
     user = request.user

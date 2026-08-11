@@ -36,7 +36,7 @@ class CustomUserCreationForm(UserCreationForm):
 
 
 
-class GiftForm(forms.Form):
+class GiftForm(forms.ModelForm):
     name = forms.CharField(
         max_length=100,
         widget=forms.TextInput(attrs={
@@ -55,13 +55,7 @@ class GiftForm(forms.Form):
             'class': 'w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring focus:ring-green-300'
         })
     )
-    def save(self, commit=True):
-        gift = Gift()
-        gift.name = self.cleaned_data['name']
-        gift.description = self.cleaned_data['description']
-        gift.link = self.cleaned_data['link']
-          # Ensure email is saved
-        if commit:
-            gift.save()
-        return gift
+    class Meta:
+        model = Gift
+        fields = ('name', 'description', 'link')
 

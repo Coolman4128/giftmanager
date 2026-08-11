@@ -84,14 +84,19 @@ Gift Manager
                     {% endif %}
                   </td>
                   <td class="border border-gray-200 px-4 py-2">
-                    <form method="post" action="">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="delete">
-                      <input type="hidden" name="gift_id" value="{{ gift.id }}">
-                      <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
-                        Delete
-                      </button>
-                    </form>
+                    <div class="flex gap-2">
+                      <a href="{% url 'edit_gift' gift.id %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        Edit
+                      </a>
+                      <form method="post" action="">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="gift_id" value="{{ gift.id }}">
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                          Delete
+                        </button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               {% endfor %}
@@ -107,14 +112,19 @@ Gift Manager
               {% if gift.link %}
                 <a href="{{ gift.link }}" class="text-green-700 hover:underline block mt-2">View Gift</a>
               {% endif %}
-              <form method="post" action="" class="mt-4">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="gift_id" value="{{ gift.id }}">
-                <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
-                  Delete
-                </button>
-              </form>
+              <div class="flex gap-2 mt-4">
+                <a href="{% url 'edit_gift' gift.id %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                  Edit
+                </a>
+                <form method="post" action="">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="gift_id" value="{{ gift.id }}">
+                  <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                    Delete
+                  </button>
+                </form>
+              </div>
             </div>
           {% endfor %}
         </div>
