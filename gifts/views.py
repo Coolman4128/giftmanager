@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 import random
 from django.db.models import Q
-from .forms import CustomUserCreationForm, GiftForm
+from .forms import AddGiftForm, CustomUserCreationForm, GiftForm
 import math
 from gifts.models import User, Gift, Family, Notification
 
@@ -89,11 +89,12 @@ def add_gift(request):
     if user.family == None:
         return redirect("family-select")
     if request.method == 'POST':
-        form = GiftForm(request.POST)
+        form = AddGiftForm(request.POST, user=request.user)
         if form.is_valid():
             gift = form.save(commit=False)
-            gift.family = request.user.family  # Assume user's family is accessible via user model
-            gift.user_paired = request.user  # Pair the gift with the logged-in user
+            gift.family = request.user.family
+            gift.user_paired = form.cleaned_data['recipient']
+            gift.created_by = request.user
             gift.is_claimed = False  # Set the default value for is_claimed
             gift.save()
             
@@ -101,7 +102,7 @@ def add_gift(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = GiftForm()
+        form = AddGiftForm(user=request.user)
 
     return render(request, 'create_gift.html', {'form': form})
 
@@ -153,14 +154,16 @@ def gift_list(request):
         action = request.POST.get('action')
         gift_id = request.POST.get('gift_id')
         if action == 'claim':
-                gift = get_object_or_404(Gift, id=gift_id)
-                if not gift.is_claimed:
+                gift = get_object_or_404(
+                    Gift,
+                    id=gift_id,
+                    family=request.user.family,
+                    is_claimed=False,
+                )
+                if gift.user_paired_id != request.user.id:
                     gift.is_claimed = True
                     gift.user_claimed = request.user
                     gift.save()
-                    
-                else:
-                    pass
 
         return redirect('home')  # Redirect to the same page after handling the action
 

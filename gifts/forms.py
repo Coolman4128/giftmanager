@@ -59,3 +59,34 @@ class GiftForm(forms.ModelForm):
         model = Gift
         fields = ('name', 'description', 'link')
 
+
+class RecipientChoiceField(forms.ModelChoiceField):
+    def __init__(self, *args, current_user, **kwargs):
+        self.current_user = current_user
+        super().__init__(*args, **kwargs)
+
+    def label_from_instance(self, user):
+        label = user.first_name or user.username
+        if user.pk == self.current_user.pk:
+            return f"{label} (You)"
+        return label
+
+
+class AddGiftForm(GiftForm):
+    recipient = RecipientChoiceField(
+        queryset=User.objects.none(),
+        current_user=None,
+        empty_label=None,
+        widget=forms.Select(attrs={
+            'class': 'w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring focus:ring-green-300'
+        }),
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['recipient'].current_user = user
+        self.fields['recipient'].queryset = User.objects.filter(
+            family=user.family
+        ).order_by('first_name', 'username')
+        self.fields['recipient'].initial = user
+

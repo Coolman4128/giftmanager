@@ -68,7 +68,12 @@
       <tbody>
         {% for gift in gifts %}
         <tr class="hover:bg-gray-100 cursor-pointer gift-row" data-description="{{ gift.description }}">
-          <td class="border border-gray-300 px-4 py-2">{{ gift.name }}</td>
+          <td class="border border-gray-300 px-4 py-2">
+            <div>{{ gift.name }}</div>
+            {% if gift.was_added_for_someone_else %}
+              <div class="text-xs text-gray-500 mt-1">* Added by {{ gift.creator_display_name }}</div>
+            {% endif %}
+          </td>
           <td class="border border-gray-300 px-4 py-2">{{ gift.user_paired.first_name }}</td>
           <td class="border border-gray-300 px-4 py-2">
             {% if gift.link %}
@@ -108,7 +113,12 @@
   <div class="lg:hidden grid grid-cols-1 gap-6">
     {% for gift in gifts %}
     <div class="bg-white shadow-md rounded-lg p-4 border border-gray-300 cursor-pointer gift-card">
-      <h3 class="text-lg font-bold text-gray-800 mb-2">{{ gift.name }}</h3>
+      <h3 class="text-lg font-bold text-gray-800">{{ gift.name }}</h3>
+      {% if gift.was_added_for_someone_else %}
+        <p class="text-xs text-gray-500 mt-1 mb-2">* Added by {{ gift.creator_display_name }}</p>
+      {% else %}
+        <div class="mb-2"></div>
+      {% endif %}
       <p class="text-sm text-gray-600 mb-2"><span class="font-bold">For:</span> {{ gift.user_paired.first_name }}</p>
       <p class="text-sm text-gray-600">
         <span class="font-bold">Link:</span>
