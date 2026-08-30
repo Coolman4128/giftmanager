@@ -15,10 +15,33 @@ from gifts.models import User, Gift, Family, Notification
 def home(request):
     return render(request, "index.html")
 
+def manageable_gifts(user):
+    """Gifts a user may edit or delete.
+
+    Their own gifts, minus any couple's gift someone else created, plus the
+    couple's gifts they created for other people.
+    """
+    return Gift.objects.filter(
+        Q(user_paired=user, couple_partner__isnull=True)
+        | Q(couple_partner__isnull=False, created_by=user)
+    )
+
+
+def notify_couple_partner(gift):
+    Notification.objects.create(
+        user_sent_to=gift.couple_partner,
+        message=(
+            f"{gift.creator_display_name} added you to the couple's gift "
+            f"'{gift.name}'. It stays hidden from your gift list so you "
+            f"cannot see who claims it."
+        ),
+    )
+
+
 @login_required
 def account(request):
-    # Gifts where the logged-in user is paired
-    attached_gifts = Gift.objects.filter(user_paired=request.user)
+    # Gifts the logged-in user is responsible for
+    attached_gifts = manageable_gifts(request.user)
 
     # Gifts claimed by the logged-in user
     claimed_gifts = Gift.objects.filter(user_claimed=request.user)
@@ -38,12 +61,12 @@ def account(request):
 
         if action == 'delete':
             # Delete gift logic
-            if gift.user_paired == request.user and gift.is_claimed:
+            if gift.can_be_managed_by(request.user) and gift.is_claimed:
                 notification = Notification(user_sent_to=gift.user_claimed, message=f"Gift '{gift.name}' has been deleted. You have automatically unclaimed this gift.")
                 notification.save()
                 gift.delete()
                 
-            elif gift.user_paired == request.user:
+            elif gift.can_be_managed_by(request.user):
                 gift.delete()
             
 
@@ -97,7 +120,10 @@ def add_gift(request):
             gift.created_by = request.user
             gift.is_claimed = False  # Set the default value for is_claimed
             gift.save()
-            
+
+            if gift.couple_partner_id:
+                notify_couple_partner(gift)
+
             return redirect('home')  # Replace 'gifts' with the name of your gift list view
         else:
             messages.error(request, 'Please correct the errors below.')
@@ -109,13 +135,18 @@ def add_gift(request):
 
 @login_required
 def edit_gift(request, gift_id):
-    gift = get_object_or_404(Gift, id=gift_id, user_paired=request.user)
+    gift = get_object_or_404(manageable_gifts(request.user), id=gift_id)
+    # Read before validation: the form writes cleaned values onto the instance.
+    previous_partner_id = gift.couple_partner_id
 
     if request.method == 'POST':
-        form = GiftForm(request.POST, instance=gift)
+        form = GiftForm(request.POST, instance=gift, user=request.user)
         if form.is_valid():
             details_changed = form.has_changed()
             gift = form.save()
+
+            if gift.couple_partner_id and gift.couple_partner_id != previous_partner_id:
+                notify_couple_partner(gift)
 
             if details_changed and gift.is_claimed and gift.user_claimed_id:
                 Notification.objects.create(
@@ -127,7 +158,7 @@ def edit_gift(request, gift_id):
 
         messages.error(request, 'Please correct the errors below.')
     else:
-        form = GiftForm(instance=gift)
+        form = GiftForm(instance=gift, user=request.user)
 
     return render(request, 'edit_gift.html', {'form': form, 'gift': gift})
 
@@ -136,7 +167,10 @@ def gift_list(request):
     user = request.user
     if user.family == None:
         return redirect("family-select")
-    gifts = Gift.objects.filter(Q(family=user.family) & ~Q(user_paired=user) )
+    # A couple's gift is hidden from both people it is for.
+    gifts = Gift.objects.filter(family=user.family).exclude(
+        Q(user_paired=user) | Q(couple_partner=user)
+    )
     users = User.objects.filter(family=user.family)
     users = users.exclude(id=user.id)
 
@@ -160,7 +194,7 @@ def gift_list(request):
                     family=request.user.family,
                     is_claimed=False,
                 )
-                if gift.user_paired_id != request.user.id:
+                if gift.user_paired_id != request.user.id and not gift.is_hidden_from(request.user):
                     gift.is_claimed = True
                     gift.user_claimed = request.user
                     gift.save()

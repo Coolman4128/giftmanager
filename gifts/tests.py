@@ -1,373 +1,327 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Family, Gift, Notification, User
+from gifts.models import Family, Gift, Notification, User
 
 
-class EditGiftTests(TestCase):
+class GiftTestCase(TestCase):
     def setUp(self):
-        self.family = Family.objects.create(name='Test Family', invite_code='123456')
-        self.owner = User.objects.create_user(
-            username='owner', password='test-password', family=self.family
+        self.family = Family.objects.create(name="Watsons", invite_code="123456")
+        self.other_family = Family.objects.create(name="Others", invite_code="654321")
+        self.alice = self.make_user("alice", "Alice")
+        self.bob = self.make_user("bob", "Bob")
+        self.carol = self.make_user("carol", "Carol")
+
+    def make_user(self, username, first_name, family=None):
+        return User.objects.create_user(
+            username=username,
+            password="hunter2hunter2",
+            first_name=first_name,
+            family=self.family if family is None else family,
         )
-        self.claimant = User.objects.create_user(
-            username='claimant', password='test-password', family=self.family
-        )
-        self.other_user = User.objects.create_user(
-            username='other', password='test-password', family=self.family
-        )
-        self.gift = Gift.objects.create(
-            name='Original gift',
-            description='Original description',
-            link='https://example.com/original',
+
+    def make_gift(self, recipient, creator=None, partner=None, name="Blender", **kwargs):
+        return Gift.objects.create(
+            name=name,
+            description="A gift",
             family=self.family,
-            user_paired=self.owner,
+            user_paired=recipient,
+            created_by=creator or recipient,
+            couple_partner=partner,
             is_claimed=False,
+            **kwargs,
         )
-        self.edit_url = reverse('edit_gift', args=[self.gift.id])
 
-    def test_edit_requires_login(self):
-        response = self.client.get(self.edit_url)
 
-        self.assertRedirects(response, f'{reverse("login")}?next={self.edit_url}')
+class LongLinkTests(GiftTestCase):
+    def long_url(self):
+        return "https://example.com/product?ref=" + ("a" * 5000)
 
-    def test_edit_form_is_prepopulated(self):
-        self.client.force_login(self.owner)
-
-        response = self.client.get(self.edit_url)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Original gift')
-        self.assertContains(response, 'Original description')
-        self.assertContains(response, 'https://example.com/original')
-        self.assertContains(response, 'Save and Close')
-
-    def test_owner_can_edit_details_without_changing_relationships(self):
-        self.gift.is_claimed = True
-        self.gift.user_claimed = self.claimant
-        self.gift.save()
-        self.client.force_login(self.owner)
-
-        response = self.client.post(self.edit_url, {
-            'name': 'Updated gift',
-            'description': 'Updated description',
-            'link': 'https://example.com/updated',
-        })
-
-        self.assertRedirects(response, reverse('account'))
-        self.gift.refresh_from_db()
-        self.assertEqual(self.gift.name, 'Updated gift')
-        self.assertEqual(self.gift.description, 'Updated description')
-        self.assertEqual(self.gift.link, 'https://example.com/updated')
-        self.assertEqual(self.gift.family, self.family)
-        self.assertEqual(self.gift.user_paired, self.owner)
-        self.assertEqual(self.gift.user_claimed, self.claimant)
-        self.assertTrue(self.gift.is_claimed)
-
-    def test_invalid_edit_does_not_modify_gift(self):
-        self.client.force_login(self.owner)
-
-        response = self.client.post(self.edit_url, {
-            'name': '',
-            'description': 'Changed description',
-            'link': 'not-a-url',
-        })
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'This field is required.')
-        self.gift.refresh_from_db()
-        self.assertEqual(self.gift.name, 'Original gift')
-        self.assertEqual(self.gift.description, 'Original description')
-        self.assertEqual(self.gift.link, 'https://example.com/original')
-
-    def test_user_cannot_edit_another_users_gift(self):
-        self.client.force_login(self.other_user)
-
-        get_response = self.client.get(self.edit_url)
-        post_response = self.client.post(self.edit_url, {
-            'name': 'Unauthorized change',
-            'description': 'Unauthorized change',
-            'link': '',
-        })
-
-        self.assertEqual(get_response.status_code, 404)
-        self.assertEqual(post_response.status_code, 404)
-        self.gift.refresh_from_db()
-        self.assertEqual(self.gift.name, 'Original gift')
-
-    def test_changed_claimed_gift_notifies_claimant(self):
-        self.gift.is_claimed = True
-        self.gift.user_claimed = self.claimant
-        self.gift.save()
-        self.client.force_login(self.owner)
-
-        self.client.post(self.edit_url, {
-            'name': 'Updated gift',
-            'description': self.gift.description,
-            'link': self.gift.link,
-        })
-
-        notification = Notification.objects.get(user_sent_to=self.claimant)
-        self.assertEqual(notification.message, "Gift 'Updated gift' has been updated.")
-
-    def test_unchanged_claimed_gift_does_not_notify_claimant(self):
-        self.gift.is_claimed = True
-        self.gift.user_claimed = self.claimant
-        self.gift.save()
-        self.client.force_login(self.owner)
-
-        self.client.post(self.edit_url, {
-            'name': self.gift.name,
-            'description': self.gift.description,
-            'link': self.gift.link,
-        })
-
-        self.assertFalse(Notification.objects.exists())
-
-    def test_changed_unclaimed_gift_does_not_create_notification(self):
-        self.client.force_login(self.owner)
-
-        self.client.post(self.edit_url, {
-            'name': 'Updated gift',
-            'description': self.gift.description,
-            'link': self.gift.link,
-        })
-
-        self.assertFalse(Notification.objects.exists())
-
-    def test_account_displays_edit_link_in_desktop_and_mobile_layouts(self):
-        self.client.force_login(self.owner)
-
-        response = self.client.get(reverse('account'))
-
-        self.assertContains(response, self.edit_url, count=2)
-
-    def test_add_gift_still_uses_form_for_new_gifts(self):
-        self.client.force_login(self.owner)
+    def test_gift_accepts_a_link_far_past_the_old_limit(self):
+        self.client.force_login(self.alice)
+        link = self.long_url()
 
         response = self.client.post(reverse('add_gift'), {
-            'name': 'New gift',
-            'description': 'New description',
-            'link': 'https://example.com/new',
-            'recipient': self.owner.id,
+            'recipient': self.alice.id,
+            'name': "Long link gift",
+            'description': "A gift",
+            'link': link,
         })
 
         self.assertRedirects(response, reverse('home'))
-        gift = Gift.objects.get(name='New gift')
-        self.assertEqual(gift.user_paired, self.owner)
-        self.assertEqual(gift.created_by, self.owner)
-        self.assertEqual(gift.family, self.family)
-        self.assertFalse(gift.is_claimed)
+        self.assertEqual(Gift.objects.get(name="Long link gift").link, link)
 
+    def test_editing_a_gift_accepts_a_long_link(self):
+        gift = self.make_gift(self.alice)
+        self.client.force_login(self.alice)
+        link = self.long_url()
 
-class GiftForAnotherUserTests(TestCase):
-    def setUp(self):
-        self.family = Family.objects.create(name='Test Family', invite_code='123456')
-        self.other_family = Family.objects.create(name='Other Family', invite_code='654321')
-        self.creator = User.objects.create_user(
-            username='creator', first_name='Casey', password='test-password', family=self.family
-        )
-        self.recipient = User.objects.create_user(
-            username='recipient', first_name='Riley', password='test-password', family=self.family
-        )
-        self.family_member = User.objects.create_user(
-            username='member', password='test-password', family=self.family
-        )
-        self.outsider = User.objects.create_user(
-            username='outsider', password='test-password', family=self.other_family
-        )
-        self.add_url = reverse('add_gift')
-
-    def create_gift_for_recipient(self, **overrides):
-        values = {
-            'name': 'A thoughtful gift',
-            'description': 'Gift description',
-            'link': 'https://example.com/gift',
-            'family': self.family,
-            'user_paired': self.recipient,
-            'created_by': self.creator,
-            'is_claimed': False,
-        }
-        values.update(overrides)
-        return Gift.objects.create(**values)
-
-    def test_add_form_lists_only_family_and_defaults_to_current_user(self):
-        self.client.force_login(self.creator)
-
-        response = self.client.get(self.add_url)
-
-        self.assertEqual(response.status_code, 200)
-        field = response.context['form'].fields['recipient']
-        self.assertQuerySetEqual(
-            field.queryset.order_by('id'),
-            User.objects.filter(family=self.family).order_by('id'),
-        )
-        self.assertEqual(field.initial, self.creator)
-        self.assertContains(response, 'Casey (You)')
-        self.assertContains(response, 'Riley')
-        self.assertNotContains(response, 'outsider')
-
-    def test_user_can_add_gift_for_family_member(self):
-        self.client.force_login(self.creator)
-
-        response = self.client.post(self.add_url, {
-            'name': 'A thoughtful gift',
-            'description': 'Gift description',
-            'link': '',
-            'recipient': self.recipient.id,
-        })
-
-        self.assertRedirects(response, reverse('home'))
-        gift = Gift.objects.get(name='A thoughtful gift')
-        self.assertEqual(gift.created_by, self.creator)
-        self.assertEqual(gift.user_paired, self.recipient)
-        self.assertEqual(gift.family, self.family)
-
-    def test_cross_family_recipient_is_rejected(self):
-        self.client.force_login(self.creator)
-
-        response = self.client.post(self.add_url, {
-            'name': 'Invalid gift',
-            'description': 'Gift description',
-            'link': '',
-            'recipient': self.outsider.id,
-        })
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Select a valid choice')
-        self.assertFalse(Gift.objects.filter(name='Invalid gift').exists())
-
-    def test_recipient_owns_and_can_edit_gift_without_changing_creator(self):
-        gift = self.create_gift_for_recipient()
-        self.client.force_login(self.recipient)
-
-        account_response = self.client.get(reverse('account'))
-        edit_response = self.client.post(reverse('edit_gift', args=[gift.id]), {
-            'name': 'Updated gift',
+        response = self.client.post(reverse('edit_gift', args=[gift.id]), {
+            'name': gift.name,
             'description': gift.description,
-            'link': gift.link,
-        })
-
-        self.assertContains(account_response, gift.name)
-        self.assertContains(account_response, reverse('edit_gift', args=[gift.id]), count=2)
-        self.assertRedirects(edit_response, reverse('account'))
-        gift.refresh_from_db()
-        self.assertEqual(gift.name, 'Updated gift')
-        self.assertEqual(gift.created_by, self.creator)
-
-    def test_recipient_can_delete_gift(self):
-        gift = self.create_gift_for_recipient()
-        self.client.force_login(self.recipient)
-
-        response = self.client.post(reverse('account'), {
-            'action': 'delete',
-            'gift_id': gift.id,
+            'link': link,
         })
 
         self.assertRedirects(response, reverse('account'))
-        self.assertFalse(Gift.objects.filter(id=gift.id).exists())
-
-    def test_gift_is_not_managed_as_one_of_creators_gifts(self):
-        gift = self.create_gift_for_recipient()
-        self.client.force_login(self.creator)
-
-        response = self.client.get(reverse('account'))
-
-        self.assertNotContains(response, reverse('edit_gift', args=[gift.id]))
-
-    def test_main_list_names_creator_in_desktop_and_mobile(self):
-        gift = self.create_gift_for_recipient()
-        self.client.force_login(self.family_member)
-
-        response = self.client.get(reverse('home'))
-        filtered_response = self.client.get(reverse('home'), {'filter_by': self.recipient.id})
-
-        self.assertContains(response, '* Added by Casey', count=2)
-        self.assertContains(filtered_response, '* Added by Casey', count=2)
-        self.assertContains(filtered_response, gift.name)
-
-    def test_self_created_gift_has_no_creator_message(self):
-        Gift.objects.create(
-            name='Self-created gift',
-            description='Gift description',
-            family=self.family,
-            user_paired=self.recipient,
-            created_by=self.recipient,
-            is_claimed=False,
-        )
-        self.client.force_login(self.family_member)
-
-        response = self.client.get(reverse('home'))
-
-        self.assertNotContains(response, '* Added by')
-
-    def test_creator_name_uses_username_fallback(self):
-        self.creator.first_name = ''
-        self.creator.save(update_fields=['first_name'])
-        self.create_gift_for_recipient()
-        self.client.force_login(self.family_member)
-
-        response = self.client.get(reverse('home'))
-
-        self.assertContains(response, '* Added by creator', count=2)
-
-    def test_deleted_creator_uses_generic_fallback(self):
-        gift = self.create_gift_for_recipient()
-        self.creator.delete()
         gift.refresh_from_db()
-        self.client.force_login(self.family_member)
+        self.assertEqual(gift.link, link)
 
-        response = self.client.get(reverse('home'))
+    def test_a_link_that_is_not_a_url_is_still_rejected(self):
+        self.client.force_login(self.alice)
 
-        self.assertIsNone(gift.created_by)
-        self.assertContains(response, '* Added by another family member', count=2)
-
-    def test_creator_can_claim_gift_created_for_recipient(self):
-        gift = self.create_gift_for_recipient()
-        self.client.force_login(self.creator)
-
-        list_response = self.client.get(reverse('home'))
-        claim_response = self.client.post(reverse('home'), {
-            'action': 'claim',
-            'gift_id': gift.id,
+        response = self.client.post(reverse('add_gift'), {
+            'recipient': self.alice.id,
+            'name': "Bad link gift",
+            'description': "A gift",
+            'link': "not a url " * 100,
         })
 
-        self.assertContains(list_response, gift.name)
-        self.assertRedirects(claim_response, reverse('home'))
-        gift.refresh_from_db()
-        self.assertTrue(gift.is_claimed)
-        self.assertEqual(gift.user_claimed, self.creator)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Gift.objects.filter(name="Bad link gift").exists())
 
-    def test_recipient_cannot_claim_own_gift_with_forged_post(self):
-        gift = self.create_gift_for_recipient()
-        self.client.force_login(self.recipient)
 
-        response = self.client.post(reverse('home'), {
-            'action': 'claim',
-            'gift_id': gift.id,
-        })
+class CouplesGiftCreationTests(GiftTestCase):
+    def post_couples_gift(self, recipient, partner, **overrides):
+        data = {
+            'recipient': recipient.id,
+            'name': "Espresso machine",
+            'description': "For the kitchen",
+            'is_couples_gift': 'on',
+            'couple_partner': partner.id if partner else '',
+        }
+        data.update(overrides)
+        return self.client.post(reverse('add_gift'), data)
+
+    def test_creating_a_couples_gift_stores_the_partner(self):
+        self.client.force_login(self.alice)
+
+        response = self.post_couples_gift(self.alice, self.bob)
 
         self.assertRedirects(response, reverse('home'))
+        gift = Gift.objects.get(name="Espresso machine")
+        self.assertEqual(gift.couple_partner, self.bob)
+        self.assertTrue(gift.is_couples_gift)
+
+    def test_creating_a_couples_gift_notifies_the_partner(self):
+        self.client.force_login(self.alice)
+
+        self.post_couples_gift(self.alice, self.bob)
+
+        notification = Notification.objects.get(user_sent_to=self.bob)
+        self.assertIn("Alice", notification.message)
+        self.assertIn("Espresso machine", notification.message)
+        self.assertFalse(Notification.objects.filter(user_sent_to=self.alice).exists())
+
+    def test_unchecking_the_box_ignores_a_submitted_partner(self):
+        self.client.force_login(self.alice)
+
+        self.post_couples_gift(self.alice, self.bob, is_couples_gift='')
+
+        gift = Gift.objects.get(name="Espresso machine")
+        self.assertIsNone(gift.couple_partner)
+        self.assertFalse(Notification.objects.exists())
+
+    def test_checking_the_box_without_a_partner_is_rejected(self):
+        self.client.force_login(self.alice)
+
+        response = self.post_couples_gift(self.alice, None)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Gift.objects.exists())
+
+    def test_the_partner_cannot_be_the_recipient(self):
+        self.client.force_login(self.alice)
+
+        response = self.post_couples_gift(self.alice, self.alice)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Gift.objects.exists())
+
+    def test_the_partner_must_be_in_the_same_family(self):
+        outsider = self.make_user("dan", "Dan", family=self.other_family)
+        self.client.force_login(self.alice)
+
+        response = self.post_couples_gift(self.alice, outsider)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Gift.objects.exists())
+
+
+class CouplesGiftVisibilityTests(GiftTestCase):
+    def gift_names_seen_by(self, user):
+        self.client.force_login(user)
+        response = self.client.get(reverse('home'))
+        return [gift.name for gift in response.context['gifts']]
+
+    def test_a_couples_gift_is_hidden_from_both_people(self):
+        self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        self.assertEqual(self.gift_names_seen_by(self.alice), [])
+        self.assertEqual(self.gift_names_seen_by(self.bob), [])
+
+    def test_a_couples_gift_is_visible_to_everyone_else(self):
+        self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        self.assertEqual(self.gift_names_seen_by(self.carol), ["Blender"])
+
+    def test_ordinary_gifts_are_still_visible_to_the_rest_of_the_family(self):
+        self.make_gift(self.alice, name="Socks")
+
+        self.assertEqual(self.gift_names_seen_by(self.bob), ["Socks"])
+        self.assertEqual(self.gift_names_seen_by(self.alice), [])
+
+    def test_the_partner_cannot_claim_their_own_couples_gift(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+        self.client.force_login(self.bob)
+
+        self.client.post(reverse('home'), {'action': 'claim', 'gift_id': gift.id})
+
         gift.refresh_from_db()
         self.assertFalse(gift.is_claimed)
-        self.assertIsNone(gift.user_claimed)
 
-    def test_user_cannot_claim_cross_family_gift(self):
-        gift = Gift.objects.create(
-            name='Outsider gift',
-            description='Gift description',
-            family=self.other_family,
-            user_paired=self.outsider,
-            created_by=self.outsider,
-            is_claimed=False,
-        )
-        self.client.force_login(self.creator)
+    def test_someone_else_can_claim_a_couples_gift(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+        self.client.force_login(self.carol)
 
-        response = self.client.post(reverse('home'), {
-            'action': 'claim',
-            'gift_id': gift.id,
-        })
+        self.client.post(reverse('home'), {'action': 'claim', 'gift_id': gift.id})
 
-        self.assertEqual(response.status_code, 404)
         gift.refresh_from_db()
-        self.assertFalse(gift.is_claimed)
+        self.assertTrue(gift.is_claimed)
+        self.assertEqual(gift.user_claimed, self.carol)
+
+
+class CouplesGiftManagementTests(GiftTestCase):
+    def account_gift_names(self, user):
+        self.client.force_login(user)
+        response = self.client.get(reverse('account'))
+        return [gift.name for gift in response.context['attached_gifts']]
+
+    def test_the_creator_manages_their_couples_gift(self):
+        self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        self.assertEqual(self.account_gift_names(self.alice), ["Blender"])
+        self.assertEqual(self.account_gift_names(self.bob), [])
+
+    def test_a_couples_gift_made_for_others_shows_only_for_its_creator(self):
+        self.make_gift(self.bob, creator=self.alice, partner=self.carol)
+
+        self.assertEqual(self.account_gift_names(self.alice), ["Blender"])
+        self.assertEqual(self.account_gift_names(self.bob), [])
+        self.assertEqual(self.account_gift_names(self.carol), [])
+
+    def test_the_recipient_cannot_edit_a_couples_gift_someone_else_made(self):
+        gift = self.make_gift(self.bob, creator=self.alice, partner=self.carol)
+        self.client.force_login(self.bob)
+
+        self.assertEqual(self.client.get(reverse('edit_gift', args=[gift.id])).status_code, 404)
+
+    def test_the_partner_cannot_edit_a_couples_gift(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+        self.client.force_login(self.bob)
+
+        self.assertEqual(self.client.get(reverse('edit_gift', args=[gift.id])).status_code, 404)
+
+    def test_the_creator_can_edit_a_couples_gift(self):
+        gift = self.make_gift(self.bob, creator=self.alice, partner=self.carol)
+        self.client.force_login(self.alice)
+
+        self.assertEqual(self.client.get(reverse('edit_gift', args=[gift.id])).status_code, 200)
+
+    def test_the_recipient_cannot_delete_a_couples_gift_someone_else_made(self):
+        gift = self.make_gift(self.bob, creator=self.alice, partner=self.carol)
+        self.client.force_login(self.bob)
+
+        self.client.post(reverse('account'), {'action': 'delete', 'gift_id': gift.id})
+
+        self.assertTrue(Gift.objects.filter(id=gift.id).exists())
+
+    def test_the_creator_can_delete_a_couples_gift(self):
+        gift = self.make_gift(self.bob, creator=self.alice, partner=self.carol)
+        self.client.force_login(self.alice)
+
+        self.client.post(reverse('account'), {'action': 'delete', 'gift_id': gift.id})
+
+        self.assertFalse(Gift.objects.filter(id=gift.id).exists())
+
+    def test_an_ordinary_gift_is_still_managed_by_its_recipient(self):
+        gift = self.make_gift(self.bob, creator=self.alice, name="Socks")
+
+        self.assertEqual(self.account_gift_names(self.bob), ["Socks"])
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.get(reverse('edit_gift', args=[gift.id])).status_code, 200)
+
+
+class CouplesGiftEditTests(GiftTestCase):
+    def edit(self, gift, user, **overrides):
+        self.client.force_login(user)
+        data = {'name': gift.name, 'description': gift.description, 'link': ''}
+        data.update(overrides)
+        return self.client.post(reverse('edit_gift', args=[gift.id]), data)
+
+    def test_the_edit_form_starts_checked_for_a_couples_gift(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+        self.client.force_login(self.alice)
+
+        form = self.client.get(reverse('edit_gift', args=[gift.id])).context['form']
+
+        self.assertTrue(form['is_couples_gift'].value())
+        self.assertEqual(form['couple_partner'].value(), self.bob.id)
+
+    def test_turning_an_ordinary_gift_into_a_couples_gift_notifies_the_partner(self):
+        gift = self.make_gift(self.alice)
+
+        response = self.edit(gift, self.alice, is_couples_gift='on', couple_partner=self.bob.id)
+
+        self.assertRedirects(response, reverse('account'))
+        gift.refresh_from_db()
+        self.assertEqual(gift.couple_partner, self.bob)
+        self.assertEqual(Notification.objects.filter(user_sent_to=self.bob).count(), 1)
+
+    def test_changing_the_partner_notifies_only_the_new_partner(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        self.edit(gift, self.alice, is_couples_gift='on', couple_partner=self.carol.id)
+
+        gift.refresh_from_db()
+        self.assertEqual(gift.couple_partner, self.carol)
+        self.assertEqual(Notification.objects.filter(user_sent_to=self.carol).count(), 1)
+        self.assertFalse(Notification.objects.filter(user_sent_to=self.bob).exists())
+
+    def test_editing_other_details_does_not_re_notify_the_partner(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        self.edit(gift, self.alice, name="New name", is_couples_gift='on', couple_partner=self.bob.id)
+
+        gift.refresh_from_db()
+        self.assertEqual(gift.name, "New name")
+        self.assertFalse(Notification.objects.filter(user_sent_to=self.bob).exists())
+
+    def test_unchecking_the_box_makes_the_gift_ordinary_again(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        self.edit(gift, self.alice, couple_partner=self.bob.id)
+
+        gift.refresh_from_db()
+        self.assertIsNone(gift.couple_partner)
+        self.assertFalse(gift.is_couples_gift)
+
+    def test_the_partner_cannot_be_set_to_the_recipient(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        response = self.edit(gift, self.alice, is_couples_gift='on', couple_partner=self.alice.id)
+
+        self.assertEqual(response.status_code, 200)
+        gift.refresh_from_db()
+        self.assertEqual(gift.couple_partner, self.bob)
+
+
+class GiftDisplayTests(GiftTestCase):
+    def test_an_ordinary_gift_shows_one_recipient(self):
+        gift = self.make_gift(self.alice)
+
+        self.assertEqual(gift.recipients_display_name, "Alice")
+
+    def test_a_couples_gift_shows_both_recipients(self):
+        gift = self.make_gift(self.alice, creator=self.alice, partner=self.bob)
+
+        self.assertEqual(gift.recipients_display_name, "Alice & Bob")

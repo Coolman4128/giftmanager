@@ -74,7 +74,12 @@
               <div class="text-xs text-gray-500 mt-1">* Added by {{ gift.creator_display_name }}</div>
             {% endif %}
           </td>
-          <td class="border border-gray-300 px-4 py-2">{{ gift.user_paired.first_name }}</td>
+          <td class="border border-gray-300 px-4 py-2">
+            <div>{{ gift.recipients_display_name }}</div>
+            {% if gift.is_couples_gift %}
+              <div class="text-xs text-gray-500 mt-1">Couple's gift</div>
+            {% endif %}
+          </td>
           <td class="border border-gray-300 px-4 py-2">
             {% if gift.link %}
               <a href="{{ gift.link }}" class="text-green-700 hover:underline" target="_blank">View</a>
@@ -119,7 +124,10 @@
       {% else %}
         <div class="mb-2"></div>
       {% endif %}
-      <p class="text-sm text-gray-600 mb-2"><span class="font-bold">For:</span> {{ gift.user_paired.first_name }}</p>
+      <p class="text-sm text-gray-600 mb-2">
+        <span class="font-bold">For:</span> {{ gift.recipients_display_name }}
+        {% if gift.is_couples_gift %}<span class="text-xs text-gray-500">(couple's gift)</span>{% endif %}
+      </p>
       <p class="text-sm text-gray-600">
         <span class="font-bold">Link:</span>
         {% if gift.link %}

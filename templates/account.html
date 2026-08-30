@@ -74,7 +74,14 @@ Gift Manager
             <tbody>
               {% for gift in attached_gifts %}
                 <tr>
-                  <td class="border border-gray-200 px-4 py-2">{{ gift.name }}</td>
+                  <td class="border border-gray-200 px-4 py-2">
+                    <div>{{ gift.name }}</div>
+                    {% if gift.is_couples_gift %}
+                      <div class="text-xs text-gray-500 mt-1">
+                        Couple's gift for {{ gift.recipients_display_name }} — hidden from both of them
+                      </div>
+                    {% endif %}
+                  </td>
                   <td class="border border-gray-200 px-4 py-2">{{ gift.description }}</td>
                   <td class="border border-gray-200 px-4 py-2">
                     {% if gift.link %}
@@ -108,6 +115,11 @@ Gift Manager
           {% for gift in attached_gifts %}
             <div class="bg-gray-100 p-4 rounded-lg shadow-md">
               <h3 class="text-lg font-bold">{{ gift.name }}</h3>
+              {% if gift.is_couples_gift %}
+                <p class="text-xs text-gray-500 mb-1">
+                  Couple's gift for {{ gift.recipients_display_name }} — hidden from both of them
+                </p>
+              {% endif %}
               <p class="text-sm text-gray-600">{{ gift.description }}</p>
               {% if gift.link %}
                 <a href="{{ gift.link }}" class="text-green-700 hover:underline block mt-2">View Gift</a>
@@ -150,7 +162,7 @@ Gift Manager
               {% for gift in claimed_gifts %}
                 <tr>
                   <td class="border px-4 py-2">{{ gift.name }}</td>
-                  <td class="border px-4 py-2">{{ gift.user_paired.first_name }}</td>
+                  <td class="border px-4 py-2">{{ gift.recipients_display_name }}</td>
                   <td class="border px-4 py-2">
                     <form method="post" action="">
                       {% csrf_token %}
@@ -170,7 +182,7 @@ Gift Manager
           {% for gift in claimed_gifts %}
             <div class="bg-gray-100 p-4 rounded-lg shadow-md">
               <h3 class="text-lg font-bold">{{ gift.name }}</h3>
-              <p class="text-sm text-gray-600">{{ gift.user_paired.first_name }}</p>
+              <p class="text-sm text-gray-600">{{ gift.recipients_display_name }}</p>
               <form method="post" action="" class="mt-4">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="unclaim">
