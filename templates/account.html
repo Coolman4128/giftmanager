@@ -161,7 +161,10 @@ Gift Manager
             <tbody>
               {% for gift in claimed_gifts %}
                 <tr>
-                  <td class="border px-4 py-2">{{ gift.name }}</td>
+                  <td class="border px-4 py-2">
+                    <div>{{ gift.name }}</div>
+                    {% include '_claimed_gift_details.html' %}
+                  </td>
                   <td class="border px-4 py-2">{{ gift.recipients_display_name }}</td>
                   <td class="border px-4 py-2">
                     <form method="post" action="">
@@ -183,6 +186,7 @@ Gift Manager
             <div class="bg-gray-100 p-4 rounded-lg shadow-md">
               <h3 class="text-lg font-bold">{{ gift.name }}</h3>
               <p class="text-sm text-gray-600">{{ gift.recipients_display_name }}</p>
+              {% include '_claimed_gift_details.html' %}
               <form method="post" action="" class="mt-4">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="unclaim">

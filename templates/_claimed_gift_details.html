@@ -1,0 +1,17 @@
+<details class="mt-2 text-sm">
+  <summary class="cursor-pointer text-green-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-700">View details</summary>
+  <div class="mt-2 space-y-2 text-gray-600">
+    <div>
+      <span class="font-semibold">Description:</span>
+      <p class="whitespace-pre-wrap break-words">{{ gift.description|default:"No description provided." }}</p>
+    </div>
+    <p>
+      <span class="font-semibold">Link:</span>
+      {% if gift.link %}
+        <a href="{{ gift.link }}" class="text-green-700 hover:underline" target="_blank" rel="noopener noreferrer">View Gift</a>
+      {% else %}
+        No link provided.
+      {% endif %}
+    </p>
+  </div>
+</details>

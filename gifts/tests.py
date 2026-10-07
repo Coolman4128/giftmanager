@@ -80,6 +80,65 @@ class LongLinkTests(GiftTestCase):
         self.assertFalse(Gift.objects.filter(name="Bad link gift").exists())
 
 
+class ClaimedGiftDetailsTests(GiftTestCase):
+    def claim_gift(self, gift, user):
+        gift.is_claimed = True
+        gift.user_claimed = user
+        gift.save()
+
+    def test_claimed_details_are_collapsible_on_desktop_and_mobile(self):
+        gift = self.make_gift(self.alice, link="https://example.com/gift")
+        self.claim_gift(gift, self.bob)
+        self.client.force_login(self.bob)
+
+        response = self.client.get(reverse('account'))
+
+        self.assertContains(response, '<details class="mt-2 text-sm">', count=2)
+        self.assertContains(response, 'View details', count=2)
+        self.assertContains(response, gift.description, count=2)
+        self.assertContains(response, 'href="https://example.com/gift"', count=2)
+        self.assertNotContains(response, '<details open')
+        gift.refresh_from_db()
+        self.assertTrue(gift.is_claimed)
+        self.assertEqual(gift.user_claimed, self.bob)
+        self.assertFalse(Notification.objects.exists())
+
+    def test_missing_details_have_fallback_text(self):
+        gift = self.make_gift(self.alice)
+        gift.description = ""
+        gift.link = ""
+        self.claim_gift(gift, self.bob)
+        self.client.force_login(self.bob)
+
+        response = self.client.get(reverse('account'))
+
+        self.assertContains(response, 'No description provided.', count=2)
+        self.assertContains(response, 'No link provided.', count=2)
+
+    def test_other_users_claimed_details_are_not_shown(self):
+        gift = self.make_gift(self.alice, link="https://example.com/private-gift")
+        gift.description = "Private claimed description"
+        self.claim_gift(gift, self.carol)
+        self.client.force_login(self.bob)
+
+        response = self.client.get(reverse('account'))
+
+        self.assertNotContains(response, gift.description)
+        self.assertNotContains(response, gift.link)
+        self.assertContains(response, 'No gifts claimed by you yet.')
+
+    def test_claimed_details_are_html_escaped(self):
+        gift = self.make_gift(self.alice)
+        gift.description = '<script>alert("test")</script>'
+        self.claim_gift(gift, self.bob)
+        self.client.force_login(self.bob)
+
+        response = self.client.get(reverse('account'))
+
+        self.assertNotContains(response, gift.description)
+        self.assertContains(response, '&lt;script&gt;', count=2)
+
+
 class CouplesGiftCreationTests(GiftTestCase):
     def post_couples_gift(self, recipient, partner, **overrides):
         data = {
